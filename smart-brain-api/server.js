@@ -80,33 +80,43 @@ app.post('/signin', (req, res) =>{
 
 app.post("/register", (req, res)=>{
 	const { email, name, password} = req.body;
-	knex('users').insert({
+	knex('users')
+	.returning('*')
+	.insert({
 		email: email,
 		name: name,
 		joined: new Date()
-	}).then(console.log)
-	
-	res.json(database.users[database.users.length-1]);
-	
 	})
+	.then(user => {
+
+	res.json(user[0]);
+
+	})
+	.catch(err => res.status(400).json('unable to join'))
+
+	
+})
 
 	
 
 app.get('/profile/:id', (req, res) =>{
 
 	const {id} = req.params;
-	let found = false;
+	knex.select('*').from('users').where({id})
+	.then(user => {
+		if ( user.length){
 
-	database.users.forEach(user => {
-		if(user.id===id){
-			found = true;
-			return res.json(user);
+				res.json(user[0]);
+
+		}else{
+			res.status(400).json('not found')
 		}
 
 	})
-	if(!found){
-		res.status(400).json('User not found');
-	}
+
+	.catch(err => res.status(400).json('error getting user'))
+
+
 
 })
 

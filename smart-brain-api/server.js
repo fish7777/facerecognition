@@ -25,7 +25,7 @@ const database = {
 		name: 'Sally',
 		email: 'Sally@gmail.com',
 		entries: 0,
-		joined: new Date()
+		joined: ''
 
 	}
 
@@ -68,7 +68,6 @@ app.post("/register", (req, res)=>{
 		id: '123',
 		name: name,
 		email: email,
-		password: password,
 		entries: 0,
 		joined: new Date()
 	})

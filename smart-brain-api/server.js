@@ -24,39 +24,7 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors());
 
-const database = {
 
-	users: [
-	{
-		id: '123',
-		name: 'John',
-		email: 'john@gmail.com',
-		password:'cookies',
-		entries: 0,
-		joined: new Date()
-
-	},
-		{
-		id: '124',
-		name: 'Sally',
-		email: 'Sally@gmail.com',
-		entries: 0,
-		joined: ''
-
-	}
-
-
-	],
-	login:[
-	{
-
-		id:'987',
-		hash:'',
-		email:'john@gmail.com'
-	}
-	]
-
-}
 
 
 app.get('/', (req, res) => {
@@ -67,23 +35,44 @@ app.get('/', (req, res) => {
 
 app.post('/signin', (req, res) =>{
 
-	if(req.body.email === database.users[0].email && req.body.password === database.users[0].password){
-		res.json("Success");
-	} else {
+knex.select('email', 'hash').from('login')
+.where('email', '=', req.body.email)
+.then(data => {
+		const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+		if (isValid) {
+			 return knex.select('*').from('users')
+			.where('email','=', req.body.email)
+			.then(user => {
+				console.log(user)
+				res.json(user[0])
+			})
+			.catch(err => res.status(400).json('unable to get user'))
+		} else {
 
-		res.status(400).json('error logging in');
-
-	}
-	
+			res.status(400).json('wrong credentials')
+		}
+		
+})
+		.catch(err => res.status(400).json('wrong credentials'))
 
 })
 
 app.post("/register", (req, res)=>{
 	const { email, name, password} = req.body;
-	knex('users')
+	const hash = bcrypt.hashSync(password);
+
+	knex.transaction(trx => {
+		trx.insert({
+			hash: hash,
+			email: email
+		})
+		.into('login')
+		.returning('email')
+		.then(loginemail =>{
+			return trx('users')
 	.returning('*')
 	.insert({
-		email: email,
+		email: loginemail[0],
 		name: name,
 		joined: new Date()
 	})
@@ -92,6 +81,13 @@ app.post("/register", (req, res)=>{
 	res.json(user[0]);
 
 	})
+
+		})
+		.then(trx.commit)
+		.catch(trx.rollback)
+	})
+
+	
 	.catch(err => res.status(400).json('unable to join'))
 
 	
@@ -120,24 +116,19 @@ app.get('/profile/:id', (req, res) =>{
 
 })
 
-app.put('/image', (req, res)=>{
-
-	const {id} = req.body;
-	let found = false;
-
-	database.users.forEach(user => {
-		if(user.id===id){
-			found = true;
-			user.entries++
-			return res.json(user.entries);
-		}
-
+app.put('/image', (req, res,)=>{
+	const { id } = req.body;
+	knex('users').where('id','=',id)
+	.increment('entries', 1)
+	.returning('entries')
+	.then(entries => {
+		res.json(entries);
 	})
-	if(!found){
-		res.status(400).json('User not found');
-	}
+	.catch(err => res.status(400).json('error getting entries'))
 
-})
+  })
+
+
 
 app.listen(3000, ()=> {
 

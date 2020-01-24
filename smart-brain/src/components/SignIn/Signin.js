@@ -33,9 +33,10 @@ onSubmitSignIn = () => {
 	})
 	.then(response => response.json())
 	.then(data => {
-		if (data === 'Success') {
+		if (data.id) {
 
-		this.props.onRouteChange('home')
+		this.props.loadUser(data);
+		this.props.onRouteChange('home');
 
 		}
 
